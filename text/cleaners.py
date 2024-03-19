@@ -133,7 +133,7 @@ def korean_cleaners(text):
     text = text.replace('@', '')
 
     phonemes = phonemize(text, language='ko', backend='espeak', strip=True, preserve_punctuation=True,
-                         with_stress=True)
+                         with_stress=True, words_mismatch="remove")
     phonemes = collapse_whitespace(phonemes)
     phonemes = phonemes.replace('(en)', '')
     phonemes = phonemes.replace('(ko)', '')
