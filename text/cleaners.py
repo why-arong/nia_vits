@@ -132,7 +132,7 @@ def korean_cleaners(text):
     text = jamotools.split_syllables(text, jamo_type="JAMO")
     text = text.replace('@', '')
 
-    phonemes = phonemize(text, language='ko', backend='espeak', strip=True, preserve_punctuation=True,
+    phonemes = phonemize(text, language='ko', backend='espeak-ng', strip=True, preserve_punctuation=True,
                          with_stress=True)
     phonemes = collapse_whitespace(phonemes)
     phonemes = phonemes.replace('(en)', '')
