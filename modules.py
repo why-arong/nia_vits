@@ -339,6 +339,7 @@ class ResidualCouplingLayer(nn.Module):
       return x, logdet
     else:
       x1 = (x1 - m) * torch.exp(-logs) * x_mask
+      print(x0.dtype, x1.dtype)
       x = torch.cat([x0, x1], 1)
       return x
 
