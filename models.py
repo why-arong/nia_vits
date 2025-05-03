@@ -133,7 +133,7 @@ class DurationPredictor(nn.Module):
 
 
 class TextEncoder(nn.Module):
-  def __init__(self,
+  def   __init__(self,
       n_vocab,
       out_channels,
       hidden_channels,
@@ -497,7 +497,6 @@ class SynthesizerTrn(nn.Module):
     return o, l_length, attn, ids_slice, x_mask, y_mask, (z, z_p, m_p, logs_p, m_q, logs_q)
 
   def infer(self, x, x_lengths, sid=None, noise_scale=1, length_scale=1, noise_scale_w=1., max_len=None):
-    print("infer..")
     x, m_p, logs_p, x_mask = self.enc_p(x, x_lengths)
     if self.n_speakers > 0:
       g = self.emb_g(sid).unsqueeze(-1) # [b, h, 1]
@@ -518,7 +517,7 @@ class SynthesizerTrn(nn.Module):
     m_p = torch.matmul(attn.squeeze(1), m_p.transpose(1, 2)).transpose(1, 2) # [b, t', t], [b, t, d] -> [b, d, t']
     logs_p = torch.matmul(attn.squeeze(1), logs_p.transpose(1, 2)).transpose(1, 2) # [b, t', t], [b, t, d] -> [b, d, t']
 
-    z_p = m_p
+    z_p = m_p + torch.randn_like(m_p) * torch.exp(logs_p) * noise_scale
     z = self.flow(z_p, y_mask, g=g, reverse=True)
     o = self.dec((z * y_mask)[:,:,:max_len], g=g)
     return o, attn, y_mask, (z, z_p, m_p, logs_p)
