@@ -147,6 +147,8 @@ class MultiHeadAttention(nn.Module):
 
   def attention(self, query, key, value, mask=None):
     # reshape [b, d, t] -> [b, n_h, t, d_k]
+    print(f"[DEBUG] query dtype: {query.dtype}, key dtype: {key.dtype}, value dtype: {value.dtype}")
+
     b, d, t_s, t_t = (*key.size(), query.size(2))
     query = query.view(b, self.n_heads, self.k_channels, t_t).transpose(2, 3)
     key = key.view(b, self.n_heads, self.k_channels, t_s).transpose(2, 3)
@@ -197,6 +199,8 @@ class MultiHeadAttention(nn.Module):
     return ret
 
   def _get_relative_embeddings(self, relative_embeddings, length):
+    print(f"[DEBUG] rel_emb dtype: {relative_embeddings.dtype}, length: {length}")
+
     max_relative_position = 2 * self.window_size + 1
     # Pad first before slice to avoid using cond ops.
     pad_length = max(length - (self.window_size + 1), 0)
@@ -212,6 +216,8 @@ class MultiHeadAttention(nn.Module):
     return used_relative_embeddings
 
   def _relative_position_to_absolute_position(self, x):
+    print(f"[DEBUG] rel2abs input dtype: {x.dtype}, shape: {x.shape}")
+
     """
     x: [b, h, l, 2*l-1]
     ret: [b, h, l, l]
@@ -250,6 +256,7 @@ class MultiHeadAttention(nn.Module):
       a Tensor with shape [1, 1, length, length]
     """
     r = torch.arange(length, dtype=torch.float32)
+    print(f"[DEBUG] arange dtype: {r.dtype}")
     diff = torch.unsqueeze(r, 0) - torch.unsqueeze(r, 1)
     return torch.unsqueeze(torch.unsqueeze(-torch.log1p(torch.abs(diff)), 0), 0)
 
