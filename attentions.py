@@ -228,25 +228,22 @@ class MultiHeadAttention(nn.Module):
     """
     batch, heads, length, _ = x.size()
     length = int(length)
-
+    print(f"batch: {batch}, heads: {heads}, length: {length},"
+          f" batch type:{type(batch)} heads:{type(heads)}, length:{type(length)}")
     # 1단계: pad before flatten
     pad_shape_1 = commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, 1]])
-    print(f"[DEBUG] pad_shape_1 (before flatten): {pad_shape_1}")
     x = F.pad(x, pad_shape_1)
 
     # 2단계: flatten with explicit ints
     flat_len = int(length * 2 * length)
-    print(f"[DEBUG] flat_len for view: {flat_len}, type: {type(flat_len)}")
     x_flat = x.view(batch, heads, flat_len)
 
     # 3단계: pad again
     pad_shape_2 = commons.convert_pad_shape([[0, 0], [0, 0], [0, length - 1]])
-    print(f"[DEBUG] pad_shape_2 (after flatten): {pad_shape_2}")
     x_flat = F.pad(x_flat, pad_shape_2)
 
     # 4단계: final view and slicing
     view_shape_final = (batch, heads, int(length) + 1, int(2 * length) - 1)
-    print(f"[DEBUG] final view shape: {view_shape_final}")
     x_final = x_flat.view(*view_shape_final)[:, :, :length, length - 1:]
 
     return x_final
@@ -258,14 +255,13 @@ class MultiHeadAttention(nn.Module):
     """
     batch, heads, length, _ = x.size()
     length = int(length)
+    print(f"batch: {batch}, heads: {heads}, length: {length},"
+          f" batch type:{type(batch)} heads:{type(heads)}, length:{type(length)}")
     # padd along column
     x = F.pad(x, commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, length-1]]))
-    print(f"In _absolute_position_to_relative_position:(x) {x}, x.shape: {x.shape}")
     x_flat = x.view([batch, heads, length**2 + length*(length -1)])
-    print(f"fdsfsd, {x_flat}, x.shape: {x_flat.shape}")
     # add 0's in the beginning that will skew the elements after reshape
     x_flat = F.pad(x_flat, commons.convert_pad_shape([[0, 0], [0, 0], [length, 0]]))
-    print(f"abcd, {x_flat}, x.shape: {x_flat.shape}")
 
     x_final = x_flat.view([batch, heads, length, 2*length])[:,:,:,1:]
 
