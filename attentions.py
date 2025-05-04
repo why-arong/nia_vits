@@ -227,6 +227,7 @@ class MultiHeadAttention(nn.Module):
     ret: [b, h, l, l]
     """
     batch, heads, length, _ = x.size()
+    length = int(length)
 
     # 1단계: pad before flatten
     pad_shape_1 = commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, 1]])
@@ -256,6 +257,7 @@ class MultiHeadAttention(nn.Module):
     ret: [b, h, l, 2*l-1]
     """
     batch, heads, length, _ = x.size()
+    length = int(length)
     # padd along column
     x = F.pad(x, commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, length-1]]))
     print(f"In _absolute_position_to_relative_position:(x) {x}, x.shape: {x.shape}")
