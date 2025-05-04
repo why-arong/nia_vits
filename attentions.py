@@ -34,6 +34,10 @@ class Encoder(nn.Module):
 
   def forward(self, x, x_mask):
     attn_mask = x_mask.unsqueeze(2) * x_mask.unsqueeze(-1)
+    print(f"[DEBUG] attn_mask dtype: {attn_mask.dtype}, shape: {attn_mask.shape}")
+    print(f"[DEBUG] x_mask dtype: {x_mask.dtype}, shape: {x_mask.shape}")
+    print(f"[DEBUG] x dtype: {x.dtype}, shape: {x.shape}")
+
     x = x * x_mask
     for i in range(self.n_layers):
       y = self.attn_layers[i](x, x, attn_mask)
