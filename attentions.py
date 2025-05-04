@@ -227,15 +227,27 @@ class MultiHeadAttention(nn.Module):
     ret: [b, h, l, l]
     """
     batch, heads, length, _ = x.size()
-    # Concat columns of pad to shift from relative to absolute indexing.
-    x = F.pad(x, commons.convert_pad_shape([[0,0],[0,0],[0,0],[0,1]]))
 
-    # Concat extra elements so to add up to shape (len+1, 2*len-1).
-    x_flat = x.view([batch, heads, length * 2 * length])
-    x_flat = F.pad(x_flat, commons.convert_pad_shape([[0,0],[0,0],[0,length-1]]))
+    # 1단계: pad before flatten
+    pad_shape_1 = commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, 1]])
+    print(f"[DEBUG] pad_shape_1 (before flatten): {pad_shape_1}")
+    x = F.pad(x, pad_shape_1)
 
-    # Reshape and slice out the padded elements.
-    x_final = x_flat.view([batch, heads, length+1, 2*length-1])[:, :, :length, length-1:]
+    # 2단계: flatten with explicit ints
+    flat_len = int(length * 2 * length)
+    print(f"[DEBUG] flat_len for view: {flat_len}, type: {type(flat_len)}")
+    x_flat = x.view(batch, heads, flat_len)
+
+    # 3단계: pad again
+    pad_shape_2 = commons.convert_pad_shape([[0, 0], [0, 0], [0, length - 1]])
+    print(f"[DEBUG] pad_shape_2 (after flatten): {pad_shape_2}")
+    x_flat = F.pad(x_flat, pad_shape_2)
+
+    # 4단계: final view and slicing
+    view_shape_final = (batch, heads, int(length) + 1, int(2 * length) - 1)
+    print(f"[DEBUG] final view shape: {view_shape_final}")
+    x_final = x_flat.view(*view_shape_final)[:, :, :length, length - 1:]
+
     return x_final
 
   def _absolute_position_to_relative_position(self, x):
