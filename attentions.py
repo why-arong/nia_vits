@@ -258,10 +258,15 @@ class MultiHeadAttention(nn.Module):
     batch, heads, length, _ = x.size()
     # padd along column
     x = F.pad(x, commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, length-1]]))
+    print(f"In _absolute_position_to_relative_position:(x) {x}, x.shape: {x.shape}")
     x_flat = x.view([batch, heads, length**2 + length*(length -1)])
+    print(f"fdsfsd, {x_flat}, x.shape: {x_flat.shape}")
     # add 0's in the beginning that will skew the elements after reshape
     x_flat = F.pad(x_flat, commons.convert_pad_shape([[0, 0], [0, 0], [length, 0]]))
+    print(f"abcd, {x_flat}, x.shape: {x_flat.shape}")
+
     x_final = x_flat.view([batch, heads, length, 2*length])[:,:,:,1:]
+
     return x_final
 
   def _attention_bias_proximal(self, length):
