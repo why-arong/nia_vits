@@ -34,9 +34,9 @@ class Encoder(nn.Module):
 
   def forward(self, x, x_mask):
     attn_mask = x_mask.unsqueeze(2) * x_mask.unsqueeze(-1)
-    print(f"[DEBUG] attn_mask dtype: {attn_mask.dtype}, shape: {attn_mask.shape}")
-    print(f"[DEBUG] x_mask dtype: {x_mask.dtype}, shape: {x_mask.shape}")
-    print(f"[DEBUG] x dtype: {x.dtype}, shape: {x.shape}")
+    # print(f"[DEBUG] attn_mask dtype: {attn_mask.dtype}, shape: {attn_mask.shape}")
+    # print(f"[DEBUG] x_mask dtype: {x_mask.dtype}, shape: {x_mask.shape}")
+    # print(f"[DEBUG] x dtype: {x.dtype}, shape: {x.shape}")
 
     x = x * x_mask
     for i in range(self.n_layers):
@@ -151,7 +151,7 @@ class MultiHeadAttention(nn.Module):
 
   def attention(self, query, key, value, mask=None):
     # reshape [b, d, t] -> [b, n_h, t, d_k]
-    print(f"[DEBUG] query dtype: {query.dtype}, key dtype: {key.dtype}, value dtype: {value.dtype}")
+    # print(f"[DEBUG] query dtype: {query.dtype}, key dtype: {key.dtype}, value dtype: {value.dtype}")
 
     b, d, t_s, t_t = (*key.size(), query.size(2))
     query = query.view(b, self.n_heads, self.k_channels, t_t).transpose(2, 3)
@@ -203,7 +203,7 @@ class MultiHeadAttention(nn.Module):
     return ret
 
   def _get_relative_embeddings(self, relative_embeddings, length):
-    print(f"[DEBUG] rel_emb dtype: {relative_embeddings.dtype}, length: {length}")
+    # print(f"[DEBUG] rel_emb dtype: {relative_embeddings.dtype}, length: {length}")
 
     max_relative_position = 2 * self.window_size + 1
     # Pad first before slice to avoid using cond ops.
@@ -220,7 +220,7 @@ class MultiHeadAttention(nn.Module):
     return used_relative_embeddings
 
   def _relative_position_to_absolute_position(self, x):
-    print(f"[DEBUG] rel2abs input dtype: {x.dtype}, shape: {x.shape}")
+    # print(f"[DEBUG] rel2abs input dtype: {x.dtype}, shape: {x.shape}")
 
     """
     x: [b, h, l, 2*l-1]
@@ -228,8 +228,8 @@ class MultiHeadAttention(nn.Module):
     """
     batch, heads, length, _ = x.size()
     length = int(length)
-    print(f"batch: {batch}, heads: {heads}, length: {length},"
-          f" batch type:{type(batch)} heads:{type(heads)}, length:{type(length)}")
+    # print(f"batch: {batch}, heads: {heads}, length: {length},"
+    #       f" batch type:{type(batch)} heads:{type(heads)}, length:{type(length)}")
     # 1단계: pad before flatten
     pad_shape_1 = commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, 1]])
     x = F.pad(x, pad_shape_1)
@@ -255,8 +255,8 @@ class MultiHeadAttention(nn.Module):
     """
     batch, heads, length, _ = x.size()
     length = int(length)
-    print(f"batch: {batch}, heads: {heads}, length: {length},"
-          f" batch type:{type(batch)} heads:{type(heads)}, length:{type(length)}")
+    # print(f"batch: {batch}, heads: {heads}, length: {length},"
+    #       f" batch type:{type(batch)} heads:{type(heads)}, length:{type(length)}")
     # padd along column
     x = F.pad(x, commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, length-1]]))
     x_flat = x.view([batch, heads, length**2 + length*(length -1)])
@@ -275,7 +275,7 @@ class MultiHeadAttention(nn.Module):
       a Tensor with shape [1, 1, length, length]
     """
     r = torch.arange(length, dtype=torch.float32)
-    print(f"[DEBUG] arange dtype: {r.dtype}")
+    # print(f"[DEBUG] arange dtype: {r.dtype}")
     diff = torch.unsqueeze(r, 0) - torch.unsqueeze(r, 1)
     return torch.unsqueeze(torch.unsqueeze(-torch.log1p(torch.abs(diff)), 0), 0)
 
