@@ -496,8 +496,8 @@ class SynthesizerTrn(nn.Module):
     o = self.dec(z_slice, g=g)
     return o, l_length, attn, ids_slice, x_mask, y_mask, (z, z_p, m_p, logs_p, m_q, logs_q)
 
-  def infer(self, x, x_lengths, sid=None, noise_scale=1, length_scale=1, noise_scale_w=1., max_len=None):
-    x, m_p, logs_p, x_mask = self.enc_p(x, x_lengths)
+  def infer(self, text, text_lengths, sid=None, noise_scale=1, length_scale=1, noise_scale_w=1., max_len=None):
+    x, m_p, logs_p, x_mask = self.enc_p(text, text_lengths)
     if self.n_speakers > 0:
       g = self.emb_g(sid).unsqueeze(-1) # [b, h, 1]
     else:
@@ -505,25 +505,34 @@ class SynthesizerTrn(nn.Module):
 
     if self.use_sdp:
       logw = self.dp(x, x_mask, g=g, reverse=True, noise_scale=noise_scale_w)
+      print("use sdp!!")
     else:
       logw = self.dp(x, x_mask, g=g)
-    print(f"logw: {logw}")
+      print("use dp not sdp!!")
+
+    print(f"logw: {logw}, logw shape: {logw.shape}")
     w = torch.exp(logw) * x_mask * length_scale
     w_ceil = torch.ceil(w)
+    print("w_ceil sum:", w_ceil.sum(dim=2))
+    print("w_ceil max:", w_ceil.max())
     y_lengths = torch.clamp_min(torch.sum(w_ceil, [1, 2]), 1).long()
+    print(f"y_lengths: {y_lengths}, y_lengths shape: {y_lengths.shape}")
     y_mask = torch.unsqueeze(commons.sequence_mask(y_lengths, None), 1).to(x_mask.dtype)
     attn_mask = torch.unsqueeze(x_mask, 2) * torch.unsqueeze(y_mask, -1)
+    print("attn_mask:", attn_mask.shape)
     attn = commons.generate_path(w_ceil, attn_mask)
-    print(f"attn: {attn}")
+    print(f"attn: {attn}, attn shape: {attn.shape}")
     m_p = torch.matmul(attn.squeeze(1), m_p.transpose(1, 2)).transpose(1, 2) # [b, t', t], [b, t, d] -> [b, d, t']
     logs_p = torch.matmul(attn.squeeze(1), logs_p.transpose(1, 2)).transpose(1, 2) # [b, t', t], [b, t, d] -> [b, d, t']
 
     # z_p = m_p + torch.randn_like(m_p) * torch.exp(logs_p) * noise_scale
     z_p = m_p
+    print("flow in :", z_p.shape)
     z = self.flow(z_p, y_mask, g=g, reverse=True)
-    print(f"z: {z}")
+    print("flow out:", z.shape)
+    print("dec in :", (z * y_mask).shape)
     o = self.dec((z * y_mask)[:,:,:max_len], g=g)
-    print(f"o: {o}")
+    print(f"dec out o: {o}, o shape: {o.shape}")
     return o, attn, y_mask, (z, z_p, m_p, logs_p)
 
   def voice_conversion(self, y, y_lengths, sid_src, sid_tgt):
