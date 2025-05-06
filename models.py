@@ -502,7 +502,9 @@ class SynthesizerTrn(nn.Module):
       g = self.emb_g(sid).unsqueeze(-1) # [b, h, 1]
     else:
       g = None
-
+    print(f"x {x}, x shape: {x.shape}, "
+          f"m_p {m_p}, logs_p {logs_p}, x_mask {x_mask}"
+          f"mp shape {m_p.shape}, logs_p shape{logs_p.shape}, x_mask shape {x_mask.shape}")
     if self.use_sdp:
       logw = self.dp(x, x_mask, g=g, reverse=True, noise_scale=noise_scale_w)
       print("use sdp!!")
@@ -517,7 +519,7 @@ class SynthesizerTrn(nn.Module):
     print("w_ceil max:", w_ceil.max())
     y_lengths = torch.clamp_min(torch.sum(w_ceil, [1, 2]), 1).long()
     print(f"y_lengths: {y_lengths}, y_lengths shape: {y_lengths.shape}")
-    y_mask = torch.unsqueeze(commons.sequence_mask(y_lengths, None), 1).to(x_mask.dtype)
+    y_mask = torch.unsqueeze(commons.sequence_mask(y_lengths, 256), 1).to(x_mask.dtype)
     attn_mask = torch.unsqueeze(x_mask, 2) * torch.unsqueeze(y_mask, -1)
     print("attn_mask:", attn_mask.shape)
     attn = commons.generate_path(w_ceil, attn_mask)
