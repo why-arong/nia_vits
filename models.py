@@ -47,14 +47,14 @@ class StochasticDurationPredictor(nn.Module):
     if gin_channels != 0:
       self.cond = nn.Conv1d(gin_channels, filter_channels, 1)
 
-  def forward(self, x, x_mask, w=None, g=None, reverse=False, noise_scale=1.0):
-    x = torch.detach(x)
+  def forward(self, text, text_mask, w=None, g=None, reverse=False, noise_scale=1.0):
+    x = torch.detach(text)
     x = self.pre(x)
     if g is not None:
       g = torch.detach(g)
       x = x + self.cond(g)
-    x = self.convs(x, x_mask)
-    x = self.proj(x) * x_mask
+    x = self.convs(x, text_mask)
+    x = self.proj(x) * text_mask
 
     if not reverse:
       flows = self.flows
@@ -62,34 +62,34 @@ class StochasticDurationPredictor(nn.Module):
 
       logdet_tot_q = 0 
       h_w = self.post_pre(w)
-      h_w = self.post_convs(h_w, x_mask)
-      h_w = self.post_proj(h_w) * x_mask
-      e_q = torch.randn(w.size(0), 2, w.size(2)).to(device=x.device, dtype=x.dtype) * x_mask
+      h_w = self.post_convs(h_w, text_mask)
+      h_w = self.post_proj(h_w) * text_mask
+      e_q = torch.randn(w.size(0), 2, w.size(2)).to(device=x.device, dtype=x.dtype) * text_mask
       z_q = e_q
       for flow in self.post_flows:
-        z_q, logdet_q = flow(z_q, x_mask, g=(x + h_w))
+        z_q, logdet_q = flow(z_q, text_mask, g=(x + h_w))
         logdet_tot_q += logdet_q
       z_u, z1 = torch.split(z_q, [1, 1], 1) 
-      u = torch.sigmoid(z_u) * x_mask
-      z0 = (w - u) * x_mask
-      logdet_tot_q += torch.sum((F.logsigmoid(z_u) + F.logsigmoid(-z_u)) * x_mask, [1,2])
-      logq = torch.sum(-0.5 * (math.log(2*math.pi) + (e_q**2)) * x_mask, [1,2]) - logdet_tot_q
+      u = torch.sigmoid(z_u) * text_mask
+      z0 = (w - u) * text_mask
+      logdet_tot_q += torch.sum((F.logsigmoid(z_u) + F.logsigmoid(-z_u)) * text_mask, [1,2])
+      logq = torch.sum(-0.5 * (math.log(2*math.pi) + (e_q**2)) * text_mask, [1,2]) - logdet_tot_q
 
       logdet_tot = 0
-      z0, logdet = self.log_flow(z0, x_mask)
+      z0, logdet = self.log_flow(z0, text_mask)
       logdet_tot += logdet
       z = torch.cat([z0, z1], 1)
       for flow in flows:
-        z, logdet = flow(z, x_mask, g=x, reverse=reverse)
+        z, logdet = flow(z, text_mask, g=x, reverse=reverse)
         logdet_tot = logdet_tot + logdet
-      nll = torch.sum(0.5 * (math.log(2*math.pi) + (z**2)) * x_mask, [1,2]) - logdet_tot
+      nll = torch.sum(0.5 * (math.log(2*math.pi) + (z**2)) * text_mask, [1,2]) - logdet_tot
       return nll + logq # [b]
     else:
       flows = list(reversed(self.flows))
       flows = flows[:-2] + [flows[-1]] # remove a useless vflow
       z = torch.zeros(x.size(0), 2, x.size(2)).to(device=x.device, dtype=x.dtype) * noise_scale
       for flow in flows:
-        z = flow(z, x_mask, g=x, reverse=reverse)
+        z = flow(z, text_mask, g=x, reverse=reverse)
       z0, z1 = torch.split(z, [1, 1], 1)
       logw = z0
       return logw
@@ -164,10 +164,10 @@ class TextEncoder(nn.Module):
       p_dropout)
     self.proj= nn.Conv1d(hidden_channels, out_channels * 2, 1)
 
-  def forward(self, x, x_lengths):
-    x = self.emb(x) * math.sqrt(self.hidden_channels) # [b, t, h]
+  def forward(self, text, text_lengths):
+    x = self.emb(text) * math.sqrt(self.hidden_channels) # [b, t, h]
     x = torch.transpose(x, 1, -1) # [b, h, t]
-    x_mask = torch.unsqueeze(commons.sequence_mask(x_lengths, x.size(2)), 1).to(x.dtype)
+    x_mask = torch.unsqueeze(commons.sequence_mask(text_lengths, x.size(2)), 1).to(x.dtype)
 
     x = self.encoder(x * x_mask, x_mask)
     stats = self.proj(x) * x_mask
